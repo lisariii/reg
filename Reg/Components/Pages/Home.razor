@@ -1,0 +1,87 @@
+﻿@page "/"
+@using Microsoft.AspNetCore.Mvc
+@using System.Collections.Generic
+@using System.Text.Json
+@inject NavigationManager NavigationManager
+
+<PageTitle>Home</PageTitle>
+
+<h2>Регистрация</h2>
+<form @onsubmit="HandleSubmit">
+    <div class="form-group">
+        <input type="text" @bind="username" placeholder="Имя пользователя" required>
+    </div>
+    <div class="form-group">
+        <input type="password" @bind="password" placeholder="Пароль" required>
+    </div>
+    <button type="submit">Зарегистрироваться</button>
+</form>
+
+@if (!string.IsNullOrEmpty(errorMessage))
+{
+    <div class="alert alert-danger">@errorMessage</div>
+}
+
+@code {
+    private string username = string.Empty;
+    private string password = string.Empty;
+    private string errorMessage = string.Empty;
+    private UserRepository userRepository = new UserRepository();
+
+    private void HandleSubmit()
+    {
+        var newUser = new User { Username = username, Password = password };
+
+        if (userRepository.AddUser(newUser))
+        {
+            // Успешная регистрация
+            NavigationManager.NavigateTo("/cul");
+        }
+        else
+        {
+            errorMessage = "Пользователь с таким именем уже существует";
+        }
+    }
+
+    public class User
+    {
+        public string Username { get; set; }
+        public string Password { get; set; }
+    }
+
+    public class UserRepository
+    {
+        private const string UsersFile = "users.json";
+        private List<User> _users = new List<User>();
+
+        public UserRepository()
+        {
+            LoadUsers();
+        }
+
+        public bool AddUser(User user)
+        {
+            if (_users.Any(u => u.Username == user.Username))
+                return false;
+
+            _users.Add(user);
+            SaveUsers();
+            return true;
+        }
+
+        private void LoadUsers()
+        {
+            if (File.Exists(UsersFile))
+            {
+                var json = File.ReadAllText(UsersFile);
+                _users = JsonSerializer.Deserialize<List<User>>(json) ?? new List<User>();
+            }
+        }
+
+        private void SaveUsers()
+        {
+            var json = JsonSerializer.Serialize(_users);
+            File.WriteAllText(UsersFile, json);
+        }
+    }
+}.
